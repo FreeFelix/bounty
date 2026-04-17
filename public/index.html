@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dork Search</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell compact">
+    <header class="search-header">
+      <div>
+        <h1>Dork Search</h1>
+        <p>Compact query search and export</p>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle">Light</button>
+        <button id="save-button">Save</button>
+        <button id="export-button">Export</button>
+      </div>
+    </header>
+
+    <section class="search-box">
+      <input id="filter-input" type="search" placeholder="Search queries..." autofocus />
+      <div class="add-row">
+        <input id="new-query-input" type="text" placeholder="Add a new query" />
+        <button id="add-query-button">Add</button>
+      </div>
+      <div class="dashboard-row">
+        <div class="dashboard-summary">
+          <span id="total-count">0</span> total · <span id="category-count">0</span> categories
+        </div>
+        <div class="import-row">
+          <input id="wordlist-file" type="file" accept=".txt" />
+          <button id="import-button">Import wordlist</button>
+        </div>
+      </div>
+      <div class="history-row">
+        <div class="history-group">
+          <div class="history-label">Recent queries</div>
+          <div id="recent-list" class="history-list"></div>
+        </div>
+        <div class="history-group">
+          <div class="history-label bookmark-header">Bookmarks <span id="bookmark-count">0</span></div>
+          <div id="bookmarks-list" class="history-list"></div>
+        </div>
+      </div>
+      <div id="category-bar" class="category-bar"></div>
+    </section>
+
+    <section class="results-panel">
+      <div id="result-summary" class="result-summary"></div>
+      <div id="query-list" class="query-list"></div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

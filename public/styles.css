@@ -176,6 +176,24 @@ button:hover {
   font-weight: 600;
 }
 
+.small-button {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text);
+  font-size: 0.78rem;
+  border: 1px solid transparent;
+}
+
+.small-button:hover {
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.small-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .history-list {
   display: flex;
   flex-wrap: wrap;

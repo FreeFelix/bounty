@@ -17,6 +17,7 @@ const elements = {
   wordlistFile: document.getElementById('wordlist-file'),
   importButton: document.getElementById('import-button'),
   generateButton: document.getElementById('generate-button'),
+  clearRecentButton: document.getElementById('clear-recent-button'),
   themeToggle: document.getElementById('theme-toggle'),
   addQueryButton: document.getElementById('add-query-button'),
   newQueryInput: document.getElementById('new-query-input'),
@@ -74,6 +75,12 @@ function addRecent(query) {
   renderRecentList();
 }
 
+function clearRecentQueries() {
+  state.recent = [];
+  saveRecentState();
+  renderRecentList();
+}
+
 function renderRecentList() {
   if (!elements.recentList) return;
   elements.recentList.innerHTML = '';
@@ -82,7 +89,13 @@ function renderRecentList() {
     empty.className = 'history-chip';
     empty.textContent = 'No recent queries yet';
     elements.recentList.appendChild(empty);
+    if (elements.clearRecentButton) {
+      elements.clearRecentButton.disabled = true;
+    }
     return;
+  }
+  if (elements.clearRecentButton) {
+    elements.clearRecentButton.disabled = false;
   }
 
   state.recent.forEach(query => {
@@ -490,6 +503,7 @@ elements.filterInput.addEventListener('input', renderQueries);
 elements.addQueryButton.addEventListener('click', addQuery);
 elements.importButton.addEventListener('click', importWordlist);
 elements.generateButton.addEventListener('click', generateCyberDorks);
+elements.clearRecentButton?.addEventListener('click', clearRecentQueries);
 elements.saveButton.addEventListener('click', saveQueries);
 elements.exportButton.addEventListener('click', exportReport);
 elements.themeToggle.addEventListener('click', toggleTheme);

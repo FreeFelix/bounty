@@ -81,18 +81,43 @@ function buildCyberGovDorks() {
     return !pattern.startsWith('filetype:') && !pattern.startsWith('intitle:') && !pattern.startsWith('inurl:') && !pattern.startsWith('"');
   }
 
+  function addQuery(query, category) {
+    const trimmed = String(query).trim();
+    if (!trimmed) return;
+    queries.push({ query: trimmed, category });
+  }
+
+  function combinations(array, size) {
+    if (size === 0) return [[]];
+    if (array.length < size) return [];
+    if (size === 1) return array.map(item => [item]);
+    const result = [];
+    for (let i = 0; i <= array.length - size; i += 1) {
+      const head = array[i];
+      const tailCombos = combinations(array.slice(i + 1), size - 1);
+      for (const tail of tailCombos) {
+        result.push([head, ...tail]);
+      }
+    }
+    return result;
+  }
+
+  const representative = {
+    admin: 'admin',
+    login: 'login',
+    vulnerability: 'phpinfo',
+    leaked: 'password',
+    disclosure: 'intitle:"index of"',
+    exposure: '"confidential"',
+  };
+  const baseCategories = Object.keys(patterns);
+
   for (const site of sites) {
     for (const [category, values] of Object.entries(patterns)) {
       for (const pattern of values) {
-        queries.push({
-          query: `${site} ${pattern}`.trim(),
-          category: `cybergov_${category}`,
-        });
+        addQuery(`${site} ${pattern}`, `cybergov_${category}`);
         if (shouldUseInurl(pattern)) {
-          queries.push({
-            query: `${site} inurl:${pattern}`.trim(),
-            category: `cybergov_${category}`,
-          });
+          addQuery(`${site} inurl:${pattern}`, `cybergov_${category}`);
         }
       }
     }
@@ -107,94 +132,25 @@ function buildCyberGovDorks() {
       ];
 
       for (const urlQuery of urlQueries) {
-        queries.push({ query: urlQuery.trim(), category: 'cybergov_url' });
+        addQuery(urlQuery, 'cybergov_url');
       }
 
       for (const keyword of homeKeywords) {
-        queries.push({
-          query: `${site}/home ${keyword}`.trim(),
-          category: 'cybergov_url',
-        });
+        addQuery(`${site}/home ${keyword}`, 'cybergov_url');
         if (shouldUseInurl(keyword)) {
-          queries.push({
-            query: `${site}/home inurl:${keyword}`.trim(),
-            category: 'cybergov_url',
-          });
-        }
-      }
-
-      const homeCombos = [
-        ['admin', 'vulnerability'],
-        ['admin', 'disclosure'],
-        ['admin', 'leaked'],
-        ['login', 'leaked'],
-        ['login', 'vulnerability'],
-        ['login', 'disclosure'],
-        ['disclosure', 'leaked'],
-        ['vulnerability', 'leaked'],
-        ['leaked', 'exposure'],
-      ];
-
-      for (const [first, second] of homeCombos) {
-        const firstValues = patterns[first] || [];
-        const secondValues = patterns[second] || [];
-        for (const termA of firstValues) {
-          for (const termB of secondValues) {
-            const combinedCategory = `cybergov_combined:${first}+${second}`;
-            queries.push({
-              query: `${site}/home ${termA} ${termB}`.trim(),
-              category: combinedCategory,
-            });
-            if (shouldUseInurl(termA)) {
-              queries.push({
-                query: `${site}/home inurl:${termA} ${termB}`.trim(),
-                category: combinedCategory,
-              });
-            }
-            if (shouldUseInurl(termB)) {
-              queries.push({
-                query: `${site}/home ${termA} inurl:${termB}`.trim(),
-                category: combinedCategory,
-              });
-            }
-          }
+          addQuery(`${site}/home inurl:${keyword}`, 'cybergov_url');
         }
       }
     }
 
-    const comboPairs = [
-      ['admin', 'login'],
-      ['admin', 'vulnerability'],
-      ['admin', 'disclosure'],
-      ['login', 'leaked'],
-      ['login', 'vulnerability'],
-      ['disclosure', 'leaked'],
-      ['disclosure', 'exposure'],
-      ['vulnerability', 'leaked'],
-    ];
-
-    for (const [first, second] of comboPairs) {
-      const firstValues = patterns[first] || [];
-      const secondValues = patterns[second] || [];
-      for (const termA of firstValues) {
-        for (const termB of secondValues) {
-          const combinedCategory = `cybergov_combined:${first}+${second}`;
-          queries.push({
-            query: `${site} ${termA} ${termB}`.trim(),
-            category: combinedCategory,
-          });
-          if (shouldUseInurl(termA)) {
-            queries.push({
-              query: `${site} inurl:${termA} ${termB}`.trim(),
-              category: combinedCategory,
-            });
-          }
-          if (shouldUseInurl(termB)) {
-            queries.push({
-              query: `${site} ${termA} inurl:${termB}`.trim(),
-              category: combinedCategory,
-            });
-          }
+    for (let comboSize = 2; comboSize <= baseCategories.length; comboSize += 1) {
+      for (const combo of combinations(baseCategories, comboSize)) {
+        const comboName = combo.join('+');
+        const comboCategory = `cybergov_combined:${comboName}`;
+        const terms = combo.map(name => representative[name] || patterns[name][0]);
+        addQuery(`${site} ${terms.join(' ')}`, comboCategory);
+        if (shouldUseInurl(terms[0])) {
+          addQuery(`${site} inurl:${terms[0]} ${terms.slice(1).join(' ')}`, comboCategory);
         }
       }
     }

@@ -10,32 +10,53 @@ A lightweight local UI for managing Google dork queries, copying CLI command tem
 - Copy query text and `curl` command templates quickly
 - Export a Markdown report with selected queries and notes
 - Save changes back to the original query file
+- Generate targeted `cyber.gov.rw` Google dorks for bug, vulnerability, and leak discovery categories
 
 ## Setup
 
-1. Install dependencies:
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd bounty
+```
+
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Initialize the MySQL database and import all queries:
+3. Create or configure the MySQL database:
+
+```bash
+# Set DB credentials as needed
+export DB_HOST=127.0.0.1
+export DB_USER=root
+export DB_PASSWORD=2015
+export DB_PORT=3306
+export DB_NAME=dork_manager
+```
+
+4. Initialize the database and import all queries from `google-dorks search query.txt`:
 
 ```bash
 npm run db:setup
 ```
 
-3. Start the app:
+5. Run the application:
 
 ```bash
 npm start
 ```
 
-4. Open the UI in your browser:
+6. Open the UI in your browser:
 
 ```bash
 http://localhost:3000
 ```
+
+7. Optional: generate `.gov.rw` and `cyber.gov.rw` dorks from the UI by clicking `Generate .gov.rw dorks`, or import additional query lists via the import form.
 
 ## How to use
 
@@ -44,6 +65,7 @@ http://localhost:3000
 - Add notes to capture evidence context.
 - Click `Save queries` to persist changes to the source query file.
 - Click `Export report` to download a Markdown report.
+- Click `Generate .gov.rw dorks` to build categorized dorks for Rwanda `.gov.rw` sites and `cyber.gov.rw` discovery categories.
 - Use `Import wordlist` to add another `.txt` query list directly from the UI.
 
 ## Notes

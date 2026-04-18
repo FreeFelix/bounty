@@ -18,9 +18,29 @@ function hashQuery(query) {
   return crypto.createHash('sha256').update(query).digest('hex');
 }
 
+function parseCategory(query) {
+  const normalized = String(query).toLowerCase();
+  if (normalized.includes('admin') || normalized.includes('dashboard') || normalized.includes('portal')) {
+    return 'admin';
+  }
+  if (normalized.includes('login') || normalized.includes('signin') || normalized.includes('auth')) {
+    return 'login';
+  }
+  if (normalized.includes('filetype:') || normalized.includes('inurl:.git') || normalized.includes('inurl:.svn') || normalized.includes('intitle:"index of"')) {
+    return 'disclosure';
+  }
+  if (normalized.includes('password') || normalized.includes('secret') || normalized.includes('apikey') || normalized.includes('token')) {
+    return 'leaked';
+  }
+  if (normalized.includes('phpinfo') || normalized.includes('debug') || normalized.includes('error') || normalized.includes('vulnerable') || normalized.includes('xss') || normalized.includes('sql')) {
+    return 'vulnerability';
+  }
+  return 'other';
+}
+
 async function getDbConnection() {
   const connection = await mysql.createConnection(dbConfig);
-  const initSql = `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; USE \`${dbName}\`; CREATE TABLE IF NOT EXISTS \`${tableName}\` (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    query TEXT NOT NULL,\n    query_hash CHAR(64) NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE KEY uq_query_hash (query_hash)\n  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`;
+  const initSql = `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; USE \`${dbName}\`; CREATE TABLE IF NOT EXISTS \`${tableName}\` (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    query TEXT NOT NULL,\n    query_hash CHAR(64) NOT NULL,\n    category VARCHAR(80) NOT NULL DEFAULT 'other',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE KEY uq_query_hash (query_hash)\n  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`;
   await connection.query(initSql);
   return connection;
 }
@@ -42,16 +62,16 @@ async function importQueries() {
 
   const connection = await getDbConnection();
   const uniqueQueries = Array.from(new Set(queries));
-  const rows = uniqueQueries.map(query => [query, hashQuery(query)]);
+  const rows = uniqueQueries.map(query => [query, hashQuery(query), parseCategory(query)]);
   const chunkSize = 500;
 
   await connection.query(`TRUNCATE TABLE \`${tableName}\`;`);
 
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
-    const placeholders = chunk.map(() => '(?, ?)').join(',');
+    const placeholders = chunk.map(() => '(?, ?, ?)').join(',');
     const values = chunk.flat();
-    const sql = `INSERT INTO \`${tableName}\` (query, query_hash) VALUES ${placeholders};`;
+    const sql = `INSERT INTO \`${tableName}\` (query, query_hash, category) VALUES ${placeholders};`;
     await connection.query(sql, values);
   }
 

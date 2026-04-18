@@ -16,6 +16,7 @@ const elements = {
   categoryCount: document.getElementById('category-count'),
   wordlistFile: document.getElementById('wordlist-file'),
   importButton: document.getElementById('import-button'),
+  generateButton: document.getElementById('generate-button'),
   themeToggle: document.getElementById('theme-toggle'),
   addQueryButton: document.getElementById('add-query-button'),
   newQueryInput: document.getElementById('new-query-input'),
@@ -146,9 +147,17 @@ function updateBookmarkSummary() {
   elements.bookmarkCount.textContent = state.bookmarks.size;
 }
 
+function getQueryCategory(item) {
+  return item.category || parseCategory(item.query);
+}
+
 function createQueryCard(item) {
   const card = document.createElement('div');
   card.className = 'query-card';
+
+  const categoryLabel = document.createElement('div');
+  categoryLabel.className = 'query-category';
+  categoryLabel.textContent = getQueryCategory(item);
 
   const title = document.createElement('p');
   title.className = 'query-text';
@@ -190,7 +199,7 @@ function createQueryCard(item) {
   });
 
   controls.append(selectButton, bookmarkButton, openButton, copyButton, curlButton);
-  card.append(title, controls);
+  card.append(categoryLabel, title, controls);
   return card;
 }
 
@@ -201,8 +210,61 @@ function sanitizeFileName(value) {
 function parseCategory(query) {
   const normalized = query.toLowerCase();
 
+  if ((normalized.includes('cyber.gov.rw/home') || normalized.includes('cyber.gov.rw home') || normalized.includes('cyber.gov.rw/ home') || normalized.includes('https://cyber.gov.rw/home') || normalized.includes('site:cyber.gov.rw/home') || normalized.includes('inurl:cyber.gov.rw/home')) && normalized.includes('cyber.gov.rw')) {
+    return 'cybergov_url';
+  }
+
+  if (normalized.includes('site:cyber.gov.rw') || normalized.includes('cyber.gov.rw') || normalized.includes('site:gov.rw') || normalized.includes('gov.rw')) {
+    const targetMap = [
+      { name: 'admin', patterns: ['admin', 'dashboard', 'control panel', 'portal', 'management', 'administrator', 'admin.php'] },
+      { name: 'login', patterns: ['login', 'secure login', 'signin', 'sign in', 'auth', 'authentication', 'session', 'password reset'] },
+      { name: 'vulnerability', patterns: ['phpinfo', 'debug', 'error', 'test.php', 'config.php', 'vulnerable', 'xss', 'sql', 'eval', 'shell', 'trace', 'stack trace', 'debug.log', 'indexof', 'console'] },
+      { name: 'leaked', patterns: ['password', 'credential', 'secret', 'apikey', 'api_key', 'token', 'private key', 'ssh key', 'db_password', 'vault', 'secret key', 'connection string'] },
+      { name: 'disclosure', patterns: ['filetype:sql', 'filetype:env', 'filetype:log', 'filetype:conf', 'filetype:xml', 'filetype:zip', 'filetype:bak', 'filetype:txt', 'inurl:.git', 'inurl:.svn', 'inurl:.hg', 'intitle:"index of"', 'inurl:"/backup/"', 'inurl:"/uploads/"', 'ext:sql', 'ext:env'] },
+      { name: 'exposure', patterns: ['"confidential"', '"internal use only"', '"sensitive information"', '"private"', '"restricted"', '"not for public"'] },
+    ];
+
+    const matched = [];
+    for (const target of targetMap) {
+      if (target.patterns.some(pattern => normalized.includes(pattern))) {
+        matched.push(target.name);
+      }
+    }
+
+    if (matched.length > 1) {
+      return `cybergov_combined:${matched.sort().join('+')}`;
+    }
+    if (matched.length === 1) {
+      return `cybergov_${matched[0]}`;
+    }
+    return 'cybergov';
+  }
+
+  const targetMap = [
+    { name: 'admin', patterns: ['admin', 'dashboard', 'control panel', 'portal', 'management'] },
+    { name: 'login', patterns: ['login', 'secure login', 'signin', 'sign in', 'auth', 'authentication'] },
+    { name: 'vulnerability', patterns: ['phpinfo', 'debug', 'error', 'test.php', 'config.php', 'vulnerable', 'xss', 'sql', 'eval', 'shell'] },
+    { name: 'leaked', patterns: ['password', 'credential', 'secret', 'apikey', 'api_key', 'token', 'private key', 'ssh key'] },
+    { name: 'disclosure', patterns: ['filetype:sql', 'filetype:env', 'filetype:log', 'filetype:conf', 'filetype:xml', 'filetype:zip', 'filetype:bak', 'inurl:.git', 'inurl:.svn', 'intitle:"index of"', 'inurl:"/backup/"', 'inurl:"/uploads/"'] },
+    { name: 'exposure', patterns: ['"confidential"', '"internal use only"', '"sensitive information"', '"private"', '"restricted"'] },
+  ];
+
+  const matched = [];
+  for (const target of targetMap) {
+    if (target.patterns.some(pattern => normalized.includes(pattern))) {
+      matched.push(target.name);
+    }
+  }
+
+  if (matched.length > 1) {
+    return `combined:${matched.sort().join('+')}`;
+  }
+  if (matched.length === 1) {
+    return matched[0];
+  }
+
   const countryMap = [
-    { name: 'rwanda', patterns: ['site:.rw', 'site:rw'] },
+    { name: 'rwanda', patterns: ['site:.rw', 'site:rw', 'site:gov.rw', 'site:cyber.gov.rw'] },
     { name: 'uganda', patterns: ['site:.ug', 'site:ug'] },
     { name: 'kenya', patterns: ['site:.ke', 'site:ke'] },
     { name: 'burundi', patterns: ['site:.bi', 'site:bi'] },
@@ -216,21 +278,6 @@ function parseCategory(query) {
   for (const country of countryMap) {
     if (country.patterns.some(pattern => normalized.includes(pattern))) {
       return country.name;
-    }
-  }
-
-  const targetMap = [
-    { name: 'gov', patterns: ['site:.gov', 'site:gov', 'site:go.', 'site:gov.'] },
-    { name: 'bank', patterns: ['bank', 'banking', 'online banking', 'customer-login', 'bankid'] },
-    { name: 'telecom', patterns: ['telecom', 'mobile money', 'mtan', 'telco', 'wireless', 'network provider'] },
-    { name: 'ngo', patterns: ['ngo', 'non-profit', 'nonprofit', 'charity', 'donate'] },
-    { name: 'microfinance', patterns: ['microfinance', 'loan'] },
-    { name: 'login', patterns: ['login', 'secure login', 'signin', 'sign in'] },
-  ];
-
-  for (const target of targetMap) {
-    if (target.patterns.some(pattern => normalized.includes(pattern))) {
-      return target.name;
     }
   }
 
@@ -249,7 +296,7 @@ function parseCategory(query) {
 function buildCategories() {
   const counts = {};
   state.queries.forEach(item => {
-    const category = parseCategory(item.query);
+    const category = getQueryCategory(item);
     counts[category] = (counts[category] || 0) + 1;
   });
 
@@ -383,6 +430,22 @@ async function saveQueries() {
   }
 }
 
+async function generateCyberDorks() {
+  const response = await fetch('/api/generate-cyber-dorks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    window.alert(`Generation failed: ${result.error || 'Unknown error'}`);
+    return;
+  }
+
+  await loadQueries();
+  window.alert(`Generated ${result.generated} cyber.gov.rw dorks and added ${result.added} new queries.`);
+}
+
 async function exportReport() {
   const items = state.queries.filter(item => state.selected.has(item.id)).map(item => ({
     query: item.query,
@@ -426,6 +489,7 @@ async function loadQueries() {
 elements.filterInput.addEventListener('input', renderQueries);
 elements.addQueryButton.addEventListener('click', addQuery);
 elements.importButton.addEventListener('click', importWordlist);
+elements.generateButton.addEventListener('click', generateCyberDorks);
 elements.saveButton.addEventListener('click', saveQueries);
 elements.exportButton.addEventListener('click', exportReport);
 elements.themeToggle.addEventListener('click', toggleTheme);
